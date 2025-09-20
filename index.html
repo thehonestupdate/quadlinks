@@ -1,0 +1,132 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Quad-box HS Film — Link Builder</title>
+<style>
+  :root { color-scheme: dark light; }
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }
+  h1 { margin: 0 0 12px; font-size: 22px; }
+  .card { max-width: 860px; margin: 0 auto; padding: 16px; border: 1px solid #5553; border-radius: 12px; }
+  label { display:block; font-weight:600; margin: 12px 0 6px; }
+  input[type="url"] { width:100%; padding:10px; border-radius:8px; border:1px solid #8886; }
+  .row { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+  .mono { font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; }
+  .out { background:#00000008; padding:10px; border-radius:8px; overflow:auto; border:1px dashed #9996; }
+  button { padding:10px 14px; border-radius:8px; border:1px solid #6665; background:#222; color:#fff; cursor:pointer; }
+  button.secondary { background:#444; }
+  small { color:#999; }
+  .links { display:flex; gap:10px; flex-wrap:wrap; margin:10px 0; }
+</style>
+<div class="card">
+  <h1>Quad-box HS Film — Link Builder</h1>
+  <p>Paste up to four direct video links (NFHS, Hudl, YouTube Live). They fill tiles left→right, top→bottom. <b>Top-right</b> is the audio tile.</p>
+
+  <div class="row">
+    <div>
+      <label>u1 — Top Left</label>
+      <input id="u1" type="url" placeholder="https://...">
+    </div>
+    <div>
+      <label>u2 — Top Right (Audio)</label>
+      <input id="u2" type="url" placeholder="https://...">
+    </div>
+  </div>
+  <div class="row">
+    <div>
+      <label>u3 — Bottom Left</label>
+      <input id="u3" type="url" placeholder="https://...">
+    </div>
+    <div>
+      <label>u4 — Bottom Right</label>
+      <input id="u4" type="url" placeholder="https://...">
+    </div>
+  </div>
+
+  <div style="margin-top:16px;">
+    <button id="build">Build Links</button>
+    <button id="clear" class="secondary">Clear</button>
+  </div>
+
+  <div id="result" style="margin-top:18px; display:none;">
+    <h3>Launch Links</h3>
+    <div class="links">
+      <a id="openCustom" href="#" target="_blank"><button>Open in App (custom scheme)</button></a>
+      <a id="openHttps" href="#" target="_blank"><button class="secondary">Open via HTTPS deep link</button></a>
+    </div>
+
+    <label>Copyable HTTPS deep link (paste into the app text box if needed)</label>
+    <div class="out mono" id="httpsText"></div>
+
+    <details style="margin-top:10px;">
+      <summary>Troubleshooting (TV)</summary>
+      <ol>
+        <li>Open the app on your TV.</li>
+        <li>Paste the HTTPS link above into the app’s text box and press Start.</li>
+      </ol>
+      <p><small>You can also send the link to yourself and type it on the TV if needed.</small></p>
+    </details>
+  </div>
+
+  <hr style="margin:18px 0;opacity:.3">
+  <details>
+    <summary><b>Advanced:</b> base64 queue link (single-player legacy)</summary>
+    <p>Put each URL on its own line:</p>
+    <textarea id="b64in" rows="5" style="width:100%;padding:10px;border-radius:8px;border:1px solid #8886"
+      placeholder="https://stream-one.m3u8&#10;https://stream-two.m3u8"></textarea>
+    <div style="margin-top:10px;">
+      <button id="makeB64">Build base64 Link</button>
+    </div>
+    <label>Result (paste into the app’s text box)</label>
+    <div class="out mono" id="b64out"></div>
+  </details>
+</div>
+
+<script>
+  const el = s => document.querySelector(s);
+  function buildQuery(u) {
+    const q = [];
+    for (let i = 1; i <= 4; i++) {
+      const v = (u["u"+i] || "").trim();
+      if (v) q.push("u"+i + "=" + encodeURIComponent(v));
+    }
+    return q.join("&");
+  }
+
+  function setLinks() {
+    const u = {
+      u1: el("#u1").value,
+      u2: el("#u2").value,
+      u3: el("#u3").value,
+      u4: el("#u4").value
+    };
+    const query = buildQuery(u);
+    if (!query) { alert("Please enter at least one link."); return; }
+
+    // If you added the custom scheme to AndroidManifest:
+    const custom = "quadboxhsfilm://quad?" + query;
+
+    // HTTPS deep link — uses your host automatically (works on Vercel, Netlify, Glitch)
+    const httpsLink = location.origin + "/quad?" + query;
+
+    el("#openCustom").href = custom;
+    el("#openHttps").href = httpsLink;
+    el("#httpsText").textContent = httpsLink;
+    el("#result").style.display = "block";
+  }
+
+  el("#build").addEventListener("click", setLinks);
+  el("#clear").addEventListener("click", () => {
+    ["#u1","#u2","#u3","#u4","#b64in","#b64out"].forEach(id => { const n = el(id); if (n) n.value = ""; });
+    el("#httpsText").textContent = "";
+    el("#result").style.display = "none";
+  });
+
+  // Base64 queue link (legacy single-player mode)
+  el("#makeB64").addEventListener("click", () => {
+    const raw = el("#b64in").value;
+    if (!raw.trim()) { alert("Enter at least one URL, one per line."); return; }
+    const b64 = btoa(raw);
+    const link = location.origin + "/?q=" + encodeURIComponent(b64);
+    el("#b64out").textContent = link;
+  });
+</script>
